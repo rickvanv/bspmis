@@ -1,0 +1,4 @@
+/usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/rick/Downloads/clion-2022.2.3/bin/ninja/linux/ninja -G Ninja -S /home/rick/CLionProjects/ParallelAlgorithms/mis -B /home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug
