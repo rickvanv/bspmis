@@ -1,4 +1,19 @@
 # ninja log v5
+0	10	1673515358424473766	libLIBS.a	293d58f983f08f43
 0	163	1669125388664798937	mis	d6caa0f41fb5ceb5
+0	40	1673515315515684509	CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspedupack.c.o	fcc733a4d1448dd8
+0	52	1673471397770439231	CMakeFiles/bspmis.dir/home/rick/Documents/BSPedupack2.0/bspsparse_input.c.o	ae4e5a8c4fcaf053
+0	85	1673471587739944584	CMakeFiles/bspmis.dir/home/rick/Documents/MulticoreBSP-for-C/bsp.c.o	417397c484f68f89
 0	33	1669125053896494046	CMakeFiles/mis.dir/main.c.o	89594ec34f5a4e81
-0	659	1669144730625839729	build.ninja	ec45ecabba24cf99
+0	87	1673515315563685416	CMakeFiles/LIBS.dir/home/rick/Documents/MulticoreBSP-for-C/bsp.c.o	2fb803171596056f
+0	116	1673470618428236482	CMakeFiles/bspmattoicrs.dir/bspmattoicrs.c.o	7b79a6c3ca499f0c
+0	108	1673521211600610732	build.ninja	ec45ecabba24cf99
+0	39	1673452419954699936	CMakeFiles/bspmattoicrs.dir/home/rick/Documents/BSPedupack2.0/bspedupack.c.o	ca71d153d618959b
+0	39	1673471397754439104	CMakeFiles/bspmis.dir/home/rick/Documents/BSPedupack2.0/bspedupack.c.o	52eee04309e8e867
+1	53	1673515315531684812	CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspsparse_input.c.o	900e18daa12d204c
+0	71	1673529765065358110	CMakeFiles/bspmis.dir/bspmis.c.o	5e376b2c5b274d2e
+71	101	1673529765093358515	bspmis	fd637401ccb6d597
+1	655	1673452583123871166	CMakeFiles/bspmattoicrs.dir/home/rick/Documents/MulticoreBSP-for-C/bsp.c.o	fc84b4c0d0ef7757
+0	50	1673452419966700021	CMakeFiles/bspmattoicrs.dir/home/rick/Documents/BSPedupack2.0/bspsparse_input.c.o	ff42cf36d9e46aa3
+0	55	1673529802245891101	CMakeFiles/bspmis.dir/bspmis.c.o	5e376b2c5b274d2e
+55	80	1673529802269891443	bspmis	fd637401ccb6d597

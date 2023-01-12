@@ -11,7 +11,7 @@
 # =============================================================================
 
 # =============================================================================
-# Project: mis
+# Project: bspmis
 # Configurations: Debug
 # =============================================================================
 
@@ -41,36 +41,76 @@ include CMakeFiles/rules.ninja
 
 cmake_ninja_workdir = /home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug/
 # =============================================================================
-# Object build statements for EXECUTABLE target mis
+# Object build statements for STATIC_LIBRARY target LIBS
 
 
 #############################################
-# Order-only phony target for mis
+# Order-only phony target for LIBS
 
-build cmake_object_order_depends_target_mis: phony || CMakeFiles/mis.dir
+build cmake_object_order_depends_target_LIBS: phony || CMakeFiles/LIBS.dir
 
-build CMakeFiles/mis.dir/main.c.o: C_COMPILER__mis_Debug /home/rick/CLionProjects/ParallelAlgorithms/mis/main.c || cmake_object_order_depends_target_mis
-  DEP_FILE = CMakeFiles/mis.dir/main.c.o.d
+build CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspedupack.c.o: C_COMPILER__LIBS_Debug /home/rick/Documents/BSPedupack2.0/bspedupack.c || cmake_object_order_depends_target_LIBS
+  DEP_FILE = CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspedupack.c.o.d
   FLAGS = -g -std=gnu99
-  OBJECT_DIR = CMakeFiles/mis.dir
-  OBJECT_FILE_DIR = CMakeFiles/mis.dir
+  INCLUDES = -I/home/rick/Documents/BSPedupack2.0 -I/home/rick/Documents/MulticoreBSP-for-C -I/home/rick/Documents/MulticoreBSP-for-C/lib
+  OBJECT_DIR = CMakeFiles/LIBS.dir
+  OBJECT_FILE_DIR = CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0
+
+build CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspsparse_input.c.o: C_COMPILER__LIBS_Debug /home/rick/Documents/BSPedupack2.0/bspsparse_input.c || cmake_object_order_depends_target_LIBS
+  DEP_FILE = CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspsparse_input.c.o.d
+  FLAGS = -g -std=gnu99
+  INCLUDES = -I/home/rick/Documents/BSPedupack2.0 -I/home/rick/Documents/MulticoreBSP-for-C -I/home/rick/Documents/MulticoreBSP-for-C/lib
+  OBJECT_DIR = CMakeFiles/LIBS.dir
+  OBJECT_FILE_DIR = CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0
 
 
 # =============================================================================
-# Link build statements for EXECUTABLE target mis
+# Link build statements for STATIC_LIBRARY target LIBS
 
 
 #############################################
-# Link the executable mis
+# Link the static library libLIBS.a
 
-build mis: C_EXECUTABLE_LINKER__mis_Debug CMakeFiles/mis.dir/main.c.o
-  FLAGS = -g
-  LINK_LIBRARIES = -lm
-  OBJECT_DIR = CMakeFiles/mis.dir
+build libLIBS.a: C_STATIC_LIBRARY_LINKER__LIBS_Debug CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspedupack.c.o CMakeFiles/LIBS.dir/home/rick/Documents/BSPedupack2.0/bspsparse_input.c.o
+  LANGUAGE_COMPILE_FLAGS = -g
+  OBJECT_DIR = CMakeFiles/LIBS.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_FILE = mis
-  TARGET_PDB = mis.dbg
+  TARGET_FILE = libLIBS.a
+  TARGET_PDB = LIBS.a.dbg
+
+# =============================================================================
+# Object build statements for EXECUTABLE target bspmis
+
+
+#############################################
+# Order-only phony target for bspmis
+
+build cmake_object_order_depends_target_bspmis: phony || cmake_object_order_depends_target_LIBS
+
+build CMakeFiles/bspmis.dir/bspmis.c.o: C_COMPILER__bspmis_Debug /home/rick/CLionProjects/ParallelAlgorithms/mis/bspmis.c || cmake_object_order_depends_target_bspmis
+  DEP_FILE = CMakeFiles/bspmis.dir/bspmis.c.o.d
+  FLAGS = -g -std=gnu99
+  INCLUDES = -I/home/rick/Documents/BSPedupack2.0 -I/home/rick/Documents/MulticoreBSP-for-C -I/home/rick/Documents/MulticoreBSP-for-C/lib
+  OBJECT_DIR = CMakeFiles/bspmis.dir
+  OBJECT_FILE_DIR = CMakeFiles/bspmis.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target bspmis
+
+
+#############################################
+# Link the executable bspmis
+
+build bspmis: C_EXECUTABLE_LINKER__bspmis_Debug CMakeFiles/bspmis.dir/bspmis.c.o | libLIBS.a /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a || libLIBS.a
+  FLAGS = -g
+  LINK_LIBRARIES = libLIBS.a  /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a
+  OBJECT_DIR = CMakeFiles/bspmis.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = bspmis
+  TARGET_PDB = bspmis.dbg
 
 
 #############################################
@@ -98,6 +138,8 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 # =============================================================================
 # Target aliases.
 
+build LIBS: phony libLIBS.a
+
 # =============================================================================
 # Folder targets.
 
@@ -106,7 +148,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 #############################################
 # Folder: /home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug
 
-build all: phony mis
+build all: phony libLIBS.a bspmis
 
 # =============================================================================
 # Built-in targets

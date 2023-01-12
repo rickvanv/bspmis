@@ -1,3 +1,4 @@
-/home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug/CMakeFiles/mis.dir
+/home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug/CMakeFiles/LIBS.dir
+/home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug/CMakeFiles/bspmis.dir
 /home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug/CMakeFiles/edit_cache.dir
 /home/rick/CLionProjects/ParallelAlgorithms/mis/cmake-build-debug/CMakeFiles/rebuild_cache.dir
