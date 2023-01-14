@@ -6,8 +6,36 @@
 #include "bspsparse_input.h"
 //#include <Mondriaan.h>
 
+#define DEADEDGE 0
+#define DEADVERTEX 1
 long P;
 
+
+void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long *Adj, long const *Start, const long *v0, long nalive){
+    bsp_nprocs_t nmessages; // total number of messages received
+    bsp_size_t nbytes; //size of nmessages
+    bsp_qsize(&nmessages,&nbytes);
+
+    for (long i=0 ; i<nmessages; i++){
+        bsp_size_t status; // not used
+        long tag;
+        bsp_get_tag(&status, &tag);
+        long e;
+        bsp_move(&e, sizeof(long));
+        long v = v0[e];
+        if (tag == DEADVERTEX){
+            Alive_vertex[v] = false;
+            nalive--;
+            for (long k=Start[v]; k<Start[v+1]; k++){
+                Alive_edge[k] = false;
+            }
+        }
+        if (tag == DEADEDGE)
+            Alive_edge[e] = false;
+    }
+}
+
+/* TODO: Insert Mondriaan part */
 
 void bspmis(){
     bsp_begin(P);
@@ -268,76 +296,159 @@ void bspmis(){
 
     /***** Part 1: run misfinder *****/
 
-    /* Initialize local mis array and alive array */
+    /* Initialize local mis array */
     long *locmis = vecalloci(nz*sizeof(long));
     long miscount = 0;
-    long *alive = vecalloci(nrows*sizeof(long));
-    for(long k=0; k<nrows; k++){
-        alive[k] = 1;
-    }
 
-    /* Create array of random values of (local) row vertices */
-    long *randval_v0 = vecalloci(nrows);
-    srand(time(NULL) * (s+1));
-    for (long k=0; k<nrows; k++){
-        randval_v0[k] = rand();
+    /* Initialize array for storing alive value of remote vertices */
+    long nalive = nvertices;
+    bool *Alive_edge = vecallocb(nedges_tot*sizeof(bool));
+    for(long e=0; e<nedges_tot; e++){
+        Alive_edge[e] = true;
     }
-
-    /* Align random values of row vertices with column vertices */
-    long *randval_v1 = vecalloci(ncols);
-    for (long k=0 ; k<ncols; k++){
-        if (rowvertex[k] != DUMMY)
-            randval_v1[k] = randval_v0[rowvertex[k]];
-        else
-            randval_v1[k] = -1;
+    bool *Alive_vertex = vecallocb(nvertices*sizeof(bool));
+    for(long v=0; v<nvertices; v++){
+        Alive_vertex[v] = true;
     }
-
 
     /* Initialize array for storing remote vertex rowindex */
-    long *v0newrem = vecalloci(nhalo*sizeof(long));
-    for (long k=0; k<nhalo; k++){ //initialize array
-        v0newrem[k] = -1;
+    long *v0newrem = vecalloci(nhalo * sizeof(long));
+    for (long e = 0; e < nhalo; e++) { //initialize array
+        v0newrem[e] = -1;
     }
-    bsp_push_reg(v0new,nedges_tot* sizeof(long)); // TODO: set nedges_tot to max(nedges_tot) over all processors
-    bsp_push_reg(randval_v0,nrows* sizeof(long));
+    /* Initialize array for storing random values of vertexes */
+    long *randval_v0 = vecalloci(nvertices);
+    long *randval_v1 = vecalloci(ncols);
+    bsp_push_reg(v0new, nedges_tot * sizeof(long)); // TODO: set nedges_tot to max(nedges_tot) over all processors (read from mondriaan MTX file?)
+    bsp_push_reg(randval_v0, nvertices * sizeof(long));
+
+    long *Done= vecalloci(p);
+    bsp_push_reg(Done,p*sizeof(long));
+
     bsp_sync();
 
-    /* Retrieve local rowindex of remote vertex */
-    for (long e=nedges; e<nedges_tot; e++){ // TODO: reduce into a single loop and a single get?
-        bsp_get(destproc[e-nedges], v0new, v1new[e]*sizeof(long), &(v0newrem[e-nedges]), sizeof(long));
-    }
-    bsp_sync();
+    bool alldone = false;
 
-    /* Using local rowindex, retrieve corresponding random value of remote vertex */
-    for (long e=nedges; e<nedges_tot; e++){
-        bsp_get(destproc[e-nedges], randval_v0, v0newrem[e-nedges]*sizeof(long), &(randval_v1[janew[e]]), sizeof(long));
-    }
-    bsp_sync();
-
-
-    for (long k=0; k<nrows; k++){
-        int ismax = 1;
-        for (long j=Start[k]; j<Start[k+1]; k++){
-            if (randval_v0[k]< randval_v1[ja[j]])
-                ismax = 0;
+    while (!alldone) {
+        /* Initialize all processors to not done yet */
+        for (long t=0; t<p; t++)
+            Done[t]= false;
+        printf("nalive = %ld\n", nalive);
+        if (nalive == 0){
+            long done = true;
+            for (long t=0; t<p; t++)
+                bsp_put(t,&done,Done,s*sizeof(long),sizeof(long));
         }
-        if (ismax = 1){
-            locmis[miscount] = rowindex[k];
-            miscount++;
-            alive[k] = 0;
+
+        bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, Start, v0new, nalive);
+        /* Create array of random values of (local) row vertices */
+        srand(time(NULL) * (s + 1));
+        for (long v = 0; v < nvertices; v++) {
+            if (Alive_vertex[v]== true)
+                randval_v0[v] = rand();
+        }
+        /* Align random values of row vertices with column vertices */
+        for (long k = 0; k < ncols; k++) {
+            if (rowvertex[k] != DUMMY)
+                randval_v1[k] = randval_v0[rowvertex[k]];
+            else
+                randval_v1[k] = -1;
+        }
+
+        /* Retrieve local rowindex of remote vertex */
+        for (long e = nedges; e < nedges_tot; e++) { // TODO: reduce into a single loop and a single get?
+            if (Alive_edge[e] == true){
+                bsp_get(destproc[e - nedges], v0new, v1new[e] * sizeof(long), &(v0newrem[e - nedges]), sizeof(long));
+            }
+        }
+        bsp_sync();
+
+        /* Using local rowindex, retrieve corresponding random value of remote vertex */
+        for (long e = nedges; e < nedges_tot; e++) {
+            if (Alive_edge[e] == true)
+                bsp_get(destproc[e - nedges], randval_v0, v0newrem[e - nedges] * sizeof(long), &(randval_v1[janew[e]]),
+                        sizeof(long));
+        }
+        bsp_sync();
+
+
+        for (long v = 0; v < nvertices; v++) {
+            if (Alive_vertex[v] == true) {
+                int ismax = 1;
+                for (long j = Start[v]; j < Start[v + 1]; j++) {
+                    if (randval_v0[v] < randval_v1[ja[j]]) // TODO: check if it can work with new arrays
+                        ismax = 0;
+                }
+                if (ismax == 1) {
+                    locmis[miscount] = rowindex[v];
+                    miscount++;
+                    Alive_vertex[v] = false; // set alive value of mis vertex to false
+                    nalive--;
+                    for (long k = Start[v];
+                         k < Start[v + 1]; k++) { // set alive value of adjacent edges and vertices to false
+                        long e = Adj[k];
+                        Alive_edge[e] = false;
+                        if (e <= nedges) {
+                            long w = v1new[e];
+                            Alive_vertex[w] = false;
+                            nalive--;
+                            for (long l = Start[w]; l < Start[w + 1]; l++) {
+                                e = Adj[l];
+                                if (e < nedges)
+                                    Alive_edge[e] = false;
+                                else {
+                                    long alive_tag = DEADEDGE; //communicate to remote processor that edge is dead
+                                    bsp_send(destproc[e - nedges], &alive_tag, &e, sizeof(long));
+                                }
+                            }
+                        } else {
+                            long alive_tag = DEADVERTEX; // communicate to remote processor that vertex is dead
+                            bsp_send(destproc[e - nedges], &alive_tag, &e, sizeof(long));
+                        }
+                    }
+//                    long w = v1new[e];
+//                    for (long l = Start[w]; l < Start[w + 1]; l++) {
+//                        e = Adj[l];
+//                        Alive_edge[e] = false;
+//                        if (e > nedges) {
+//                            long alive_tag = DEADEDGE;
+//                            bsp_send(destproc[e - nedges], &alive_tag, &e, sizeof(long));
+//                        }
+//                    }
+                }
+            }
+        }
+        bsp_sync();
+        alldone = true;
+        for (long t=0; t<p; t++){
+//            printf(Done[t] ? "true": "false");
+            if (Done[t] == false){
+                alldone = false;
+                break;
+            }
         }
     }
+    bsp_sync();
+    printf("Local MIS at processor %ld :", s);
+    for (long k=0; k<miscount; k++){
+        printf("%ld, ", locmis[k]);
+    }
+    fflush(stdout);
 
-
-
+    bsp_pop_reg(v0new);
+    bsp_pop_reg(randval_v0);
+//    bsp_sync();
     bsp_end();
-
 }
+
 int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
     /* Sequential part */
     P = 2;
+
+    /* SPMD part */
     bspmis();
+
     return 0;
 }
 
