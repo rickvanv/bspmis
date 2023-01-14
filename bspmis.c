@@ -11,7 +11,7 @@
 long P;
 
 
-void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long *Adj, long const *Start, const long *v0, long nalive){
+void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long *Adj, long const *Start, const long *v0, long *nalive){
     bsp_nprocs_t nmessages; // total number of messages received
     bsp_size_t nbytes; //size of nmessages
     bsp_qsize(&nmessages,&nbytes);
@@ -24,8 +24,10 @@ void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long *Adj, lon
         bsp_move(&e, sizeof(long));
         long v = v0[e];
         if (tag == DEADVERTEX){
-            Alive_vertex[v] = false;
-            nalive--;
+            if (Alive_vertex[v] == true) {
+                Alive_vertex[v] = false;
+                (*nalive)--;
+            }
             for (long k=Start[v]; k<Start[v+1]; k++){
                 Alive_edge[k] = false;
             }
@@ -340,7 +342,7 @@ void bspmis(){
                 bsp_put(t,&done,Done,s*sizeof(long),sizeof(long));
         }
 
-        bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, Start, v0new, nalive);
+        bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, Start, v0new, &nalive);
         /* Create array of random values of (local) row vertices */
         srand(time(NULL) * (s + 1));
         for (long v = 0; v < nvertices; v++) {
@@ -376,7 +378,7 @@ void bspmis(){
             if (Alive_vertex[v] == true) {
                 int ismax = 1;
                 for (long j = Start[v]; j < Start[v + 1]; j++) {
-                    if (randval_v0[v] < randval_v1[ja[j]]) // TODO: check if it can work with new arrays
+                    if (Alive_edge[j] == true && randval_v0[v] < randval_v1[ja[j]]) // TODO: check if it can work with new arrays
                         ismax = 0;
                 }
                 if (ismax == 1) {
@@ -388,10 +390,12 @@ void bspmis(){
                          k < Start[v + 1]; k++) { // set alive value of adjacent edges and vertices to false
                         long e = Adj[k];
                         Alive_edge[e] = false;
-                        if (e <= nedges) {
+                        if (e < nedges) { // check if edge is a local edge
                             long w = v1new[e];
-                            Alive_vertex[w] = false;
-                            nalive--;
+                            if (Alive_vertex[w] == true) {
+                                Alive_vertex[w] = false;
+                                nalive--;
+                            }
                             for (long l = Start[w]; l < Start[w + 1]; l++) {
                                 e = Adj[l];
                                 if (e < nedges)
@@ -406,15 +410,6 @@ void bspmis(){
                             bsp_send(destproc[e - nedges], &alive_tag, &e, sizeof(long));
                         }
                     }
-//                    long w = v1new[e];
-//                    for (long l = Start[w]; l < Start[w + 1]; l++) {
-//                        e = Adj[l];
-//                        Alive_edge[e] = false;
-//                        if (e > nedges) {
-//                            long alive_tag = DEADEDGE;
-//                            bsp_send(destproc[e - nedges], &alive_tag, &e, sizeof(long));
-//                        }
-//                    }
                 }
             }
         }
@@ -430,14 +425,15 @@ void bspmis(){
     }
     bsp_sync();
     printf("Local MIS at processor %ld :", s);
+    fflush(stdout);
     for (long k=0; k<miscount; k++){
-        printf("%ld, ", locmis[k]);
+        printf("%ld: %ld, ",s, locmis[k]+1);
     }
     fflush(stdout);
 
     bsp_pop_reg(v0new);
     bsp_pop_reg(randval_v0);
-//    bsp_sync();
+    bsp_sync();
     bsp_end();
 }
 
