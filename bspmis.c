@@ -385,14 +385,16 @@ void bspmis(){
                     miscount++;
                     Alive_vertex[v] = false; // set alive value of mis vertex to false
                     nalive--;
-                    for (long k = Start[v];
-                         k < Start[v + 1]; k++) { // set alive value of adjacent edges and vertices to false
+                    for (long k = Start[v]; k < Start[v + 1]; k++) { // set alive value of adjacent edges and vertices to false
                         long e = Adj[k];
                         Alive_edge[e] = false;
                         if (e < nedges) { // check if edge is a local edge
-                            long w = rowvertex[janew[e]];
+                            long w;
+                            if (v0new[e] == v)
+                                w = v1new[e];
+                            else
+                                w = v0new[e];
                             if (Alive_vertex[w] == true) {
-                                printf("Alive vertex %ld set to false\n", w );
                                 Alive_vertex[w] = false;
                                 nalive--;
                             }
