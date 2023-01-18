@@ -7,13 +7,15 @@ set(SOURCE_FILES
         /home/rick/Documents/BSPedupack2.0/bspedupack.c
         /home/rick/Documents/BSPedupack2.0/bspsparse_input.c
         )
-#set(HEADER_FILES /home/rick/Documents/MulticoreBSP-for-C/bsp.h /home/rick/Documents/BSPedupack2.0/bspedupack.h /home/rick/Documents/BSPedupack2.0/bspedupack.h /home/rick/Documents/BSPedupack2.0/bspsparse_input.h)
 
 add_library(LIBS ${SOURCE_FILES})
 target_include_directories(LIBS PUBLIC /home/rick/Documents/BSPedupack2.0)
 target_include_directories(LIBS PUBLIC /home/rick/Documents/MulticoreBSP-for-C)
-target_include_directories(LIBS PUBLIC /home/rick/Documents/MulticoreBSP-for-C/lib)
+target_include_directories(LIBS PUBLIC /home/rick/Documents/mondriaan-master/src/include)
+target_compile_options(LIBS PUBLIC -DGAINBUCKET_ARRAY)
 
 add_executable(bspmis bspmis.c)
 target_link_libraries(bspmis LIBS)
 target_link_libraries(bspmis /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a)
+target_link_libraries(bspmis /home/rick/Documents/mondriaan-master/src/lib/libMondriaan4.a)
+
