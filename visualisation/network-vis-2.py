@@ -4,9 +4,9 @@ import fast_matrix_market as fmm
 
 matrix = fmm.mmread("ca-GrQc-test.mtx")
 matnet = Network()
-size = 5242
-
 newmatrix = matrix.tocsr()
+
+size = newmatrix.shape[0]
 
 for k in range(0, size):
     matnet.add_node(k)
