@@ -11,7 +11,7 @@
 long P;
 
 
-void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long *Adj, long const *Start, const long *v0, long *nalive){
+void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Adj, long const *destproc, long const *v1, long const *Start, long const *v0, long *nalive, long const nedges){
     bsp_nprocs_t nmessages; // total number of messages received
     bsp_size_t nbytes; //size of nmessages
     bsp_qsize(&nmessages,&nbytes);
@@ -29,7 +29,13 @@ void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long *Adj, lon
                 (*nalive)--;
             }
             for (long k=Start[v]; k<Start[v+1]; k++){
-                Alive_edge[Adj[k]] = false; // TODO: communication for halo edges
+                long f = Alive_edge[Adj[k]] = false;
+                if (f<nedges)
+                    Alive_edge[Adj[k]] = false;
+                else{
+                    long alive_tag = DEADEDGE; //communicate to remote processor that edge is dead
+                    bsp_send(destproc[e - nedges], &alive_tag, &(v1[e]), sizeof(long));
+                }
             }
         }
         if (tag == DEADEDGE)
@@ -50,9 +56,7 @@ void bspmis(){
     /* Input of sparse matrix into triple storage */
     long n, nz, *ia, *ja;
     double *weight;
-    double suma= bspinput2triple(&n,&nz,&ia,&ja,&weight);
-
-    /* Sequential part */
+    double suma= bspinput2triple(&n,&nz,&ia,&ja,&weight);/* Sequential part */
     long maxops=0;
     bsp_push_reg(&maxops,sizeof(long));
     bsp_sync();
@@ -75,9 +79,12 @@ void bspmis(){
 
     long nrows, ncols, *rowindex, *colindex, *Start;
     triple2icrs(n,nz,ia,ja,weight,&nrows,&ncols,&rowindex,&colindex,&Start);
+//    for (long k = 0; k<nz; k++){
+//        printf("weight = %f\n", weight[k]);
+//    }
 
     vecfreei(ia); // increments are not needed
-    vecfreed(weight);
+//    vecfreed(weight);
 
     /* Translate to graph language. Here, nz is the number of edges
        including symmetric duplicates. */
@@ -183,9 +190,9 @@ void bspmis(){
 
     vecfreei(new);
     vecfreei(weight1);
+    vecfreed(weight);
     vecfreei(v1);
     vecfreei(v0);
-
     /* Initialize communication data structure */
     long np= nloc(p,s,n);
     long *tmpproc=vecalloci(np); // temporary array for storing the owners
@@ -222,6 +229,8 @@ void bspmis(){
 //    vecfreei(rowvertex);
     bsp_sync();
     bsp_pop_reg(tmpproc);
+    printf("Initialization succeeded\n");
+    fflush(stdout);
 
     /* Initialize destproc[e-nedges]= owner of halo edge e
        and send the local edge number e to this owner */
@@ -295,6 +304,7 @@ void bspmis(){
 
     /***** Part 1: run misfinder *****/
 
+
     /* Initialize local mis array */
     long *locmis = vecalloci(nvertices*sizeof(long));
     long miscount = 0;
@@ -339,7 +349,7 @@ void bspmis(){
                 bsp_put(t,&done,Done,s*sizeof(long),sizeof(long));
         }
         bsp_sync();
-        bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, Start, v0new, &nalive);
+        bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, destproc, v1new, Start, v0new, &nalive, nedges);
         bsp_sync();
         /* Create array of random values of (local) row vertices */
         for (long v = 0; v < nvertices; v++) {
@@ -376,7 +386,7 @@ void bspmis(){
             if (Alive_vertex[v] == true) {
                 bool ismax = true;
                 for (long j = Start[v]; j < Start[v + 1]; j++) {
-                    if (Alive_edge[Adj[j]] == true && randval_v0[v] < randval_v1[janew[Adj[j]]]) { // TODO: check if it can work with new arrays
+                    if (Alive_edge[Adj[j]] == true && randval_v0[v] < randval_v1[janew[Adj[j]]]) {
                         ismax = false;
                     }
                 }
@@ -439,7 +449,7 @@ void bspmis(){
 int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
     /* Sequential part */
-    P = 2;
+    P = 4;
 
     /* SPMD part */
     bspmis();
