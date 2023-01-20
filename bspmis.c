@@ -1,16 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-//#include "math.h"
 #include <time.h>
 #include "bspedupack.h"
 #include "bspsparse_input.h"
-#include <Mondriaan.h>
 
 #define DEADEDGE 0
 #define DEADVERTEX 1
+
 long P;
-char *mtxfilepath;
-char distrmtxfilepath[MAX_WORD_LENGTH];
+char distrmtxfilepath[1024] = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/ca-GrQc/ca-GrQc.mtx-P4";
 
 void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Adj, long const *destproc, long const *v1, long const *Start, long const *v0, long *nalive, long const nedges){
     bsp_nprocs_t nmessages; // total number of messages received
@@ -45,38 +43,7 @@ void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Ad
 }
 
 /* TODO: Insert Mondriaan part */
-void write_distributed_mtx(char *inputfilepath){
-    sprintf(distrmtxfilepath, "%s-P%ld", inputfilepath, P);
-    FILE *OutputFile;
-    if ((OutputFile = fopen(distrmtxfilepath,"r")) == NULL) { //check if output file already exists
-        OutputFile = fopen(distrmtxfilepath,"w");
-        FILE *InputFile;
-        InputFile = fopen(inputfilepath, "r");
-        /* This will contain the Mondriaan options. */
-        struct opts Options;
-        /* This structure will contain the input matrix. */
-        struct sparsematrix inputmatrix;
-        /* Set the default options. */
-        SetDefaultOptions(&Options);
-        /* If we are done setting the options, we check and apply them. */
-        if (!ApplyOptions(&Options)) {
-            printf("Invalid options!\n");
-        }
-        /* Read it from the file. */
-        if (!MMReadSparseMatrix(InputFile, &inputmatrix)) {
-            printf("Unable to read matrix!\n");
-            fclose(InputFile);
-        }
-        fclose(InputFile);
-        if (!DistributeMatrixMondriaan(&inputmatrix, P, 0.03, &Options, NULL)) {
-            printf("Unable to distribute matrix!\n");
-        }
 
-        /* Write the distributed matrix to file */
-        MMWriteSparseMatrix(&inputmatrix, OutputFile, NULL, &Options);
-        fclose(OutputFile);
-    }
-}
 
 void bspmis(){
 
@@ -484,8 +451,6 @@ int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
     /* Sequential part */
     P = 4;
-    mtxfilepath = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/ca-GrQc/ca-GrQc.mtx";
-    write_distributed_mtx(mtxfilepath);
     /* SPMD part */
     bspmis();
     return 0;
