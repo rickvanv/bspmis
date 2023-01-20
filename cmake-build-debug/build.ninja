@@ -105,7 +105,7 @@ build CMakeFiles/bspmis.dir/bspmis.c.o: C_COMPILER__bspmis_Debug /home/rick/CLio
 
 build bspmis: C_EXECUTABLE_LINKER__bspmis_Debug CMakeFiles/bspmis.dir/bspmis.c.o | libLIBS.a /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a /home/rick/Documents/mondriaan-master/src/lib/libMondriaan4.a || libLIBS.a
   FLAGS = -g
-  LINK_LIBRARIES = libLIBS.a  /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a  /home/rick/Documents/mondriaan-master/src/lib/libMondriaan4.a
+  LINK_LIBRARIES = libLIBS.a  /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a  /home/rick/Documents/mondriaan-master/src/lib/libMondriaan4.a  -lm
   OBJECT_DIR = CMakeFiles/bspmis.dir
   POST_BUILD = :
   PRE_LINK = :

@@ -9,7 +9,8 @@
 #define DEADEDGE 0
 #define DEADVERTEX 1
 long P;
-
+char *mtxfilepath;
+char distrmtxfilepath[MAX_WORD_LENGTH];
 
 void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Adj, long const *destproc, long const *v1, long const *Start, long const *v0, long *nalive, long const nedges){
     bsp_nprocs_t nmessages; // total number of messages received
@@ -45,12 +46,10 @@ void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Ad
 
 /* TODO: Insert Mondriaan part */
 void write_distributed_mtx(char *inputfilepath){
-    char outputfilepath[MAX_WORD_LENGTH];
-    sprintf(outputfilepath, "%s-P%ld", inputfilepath, P);
+    sprintf(distrmtxfilepath, "%s-P%ld", inputfilepath, P);
     FILE *OutputFile;
-//    OutputFile = fopen(outputfilepath, "r");
-    if ((OutputFile = fopen(outputfilepath,"r")) == NULL) { //check if output file already exists
-        OutputFile = fopen(outputfilepath,"w");
+    if ((OutputFile = fopen(distrmtxfilepath,"r")) == NULL) { //check if output file already exists
+        OutputFile = fopen(distrmtxfilepath,"w");
         FILE *InputFile;
         InputFile = fopen(inputfilepath, "r");
         /* This will contain the Mondriaan options. */
@@ -80,6 +79,7 @@ void write_distributed_mtx(char *inputfilepath){
 }
 
 void bspmis(){
+
     bsp_begin(P);
 
     /***** Part 0: prepare input *****/
@@ -90,7 +90,7 @@ void bspmis(){
     /* Input of sparse matrix into triple storage */
     long n, nz, *ia, *ja;
     double *weight;
-    double suma= bspinput2triple(&n,&nz,&ia,&ja,&weight);/* Sequential part */
+    double suma= bspinput2triple(distrmtxfilepath,&n,&nz,&ia,&ja,&weight);/* Sequential part */
     long maxops=0;
     bsp_push_reg(&maxops,sizeof(long));
     bsp_sync();
@@ -263,8 +263,8 @@ void bspmis(){
 //    vecfreei(rowvertex);
     bsp_sync();
     bsp_pop_reg(tmpproc);
-    printf("Initialization succeeded\n");
-    fflush(stdout);
+//    printf("Initialization succeeded\n");
+//    fflush(stdout);
 
     /* Initialize destproc[e-nedges]= owner of halo edge e
        and send the local edge number e to this owner */
@@ -484,10 +484,10 @@ int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
     /* Sequential part */
     P = 4;
-
+    mtxfilepath = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/ca-GrQc/ca-GrQc.mtx";
+    write_distributed_mtx(mtxfilepath);
     /* SPMD part */
     bspmis();
-
     return 0;
 }
 

@@ -12,10 +12,12 @@ add_library(LIBS ${SOURCE_FILES})
 target_include_directories(LIBS PUBLIC /home/rick/Documents/BSPedupack2.0)
 target_include_directories(LIBS PUBLIC /home/rick/Documents/MulticoreBSP-for-C)
 target_include_directories(LIBS PUBLIC /home/rick/Documents/mondriaan-master/src/include)
+target_link_libraries(LIBS m)
 target_compile_options(LIBS PUBLIC -DGAINBUCKET_ARRAY)
 
 add_executable(bspmis bspmis.c)
 target_link_libraries(bspmis LIBS)
+
 target_link_libraries(bspmis /home/rick/Documents/MulticoreBSP-for-C/lib/libmcbsp2.0.4.a)
 target_link_libraries(bspmis /home/rick/Documents/mondriaan-master/src/lib/libMondriaan4.a)
 
