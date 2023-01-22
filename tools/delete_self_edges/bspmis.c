@@ -9,7 +9,7 @@
 #define DEADVERTEX 1
 long P;
 //char *mtxfilepath;
-char distrmtxfilepath[MAX_WORD_LENGTH] = "/home/bissstud/Students22/RickLisa/ca-GrQc.mtx-P4";
+char distrmtxfilepath[MAX_WORD_LENGTH] = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/testmatrix/test.mtx-P2";
 
 void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Adj, long const *destproc, long const *v1, long const *Start, long const *v0, long *nalive, long const nedges){
     bsp_nprocs_t nmessages; // total number of messages received
@@ -434,7 +434,8 @@ void bspmis(){
                 if (Alive_vertex[v]) {
                     bool ismax = true;
                     for (long j = Start[v]; j < Start[v + 1]; j++) {
-                        if (Alive_edge[Adj[j]] == true && randval_v0[v] < randval_v1[janew[Adj[j]]]) {
+                        printf("%ld: v = %ld, v0 = %ld, v1 = %ld, colindex[janew[Adj[j]] = %ld\n",s, rowindex[v], rowindex[v0new[Adj[j]]], v1new[Adj[j]], colindex[janew[Adj[j]]]);
+                        if (Alive_edge[Adj[j]] == true && randval_v0[v] <= randval_v1[janew[Adj[j]]]) {
                             ismax = false;
                         }
                     }
@@ -503,7 +504,7 @@ void bspmis(){
 int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
     /* Sequential part */
-    P = 4;
+    P = 2;
 //    mtxfilepath = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/ca-GrQc/ca-GrQc.mtx";
 //    write_distributed_mtx(mtxfilepath);
     /* SPMD part */
