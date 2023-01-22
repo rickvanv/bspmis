@@ -434,18 +434,18 @@ void bspmis(){
                     maxrandedge = 0;
                     for (long j = Start[v]; j < Start[v + 1]; j++) { // find adjacent vertex with the largest random value
                         if ((Alive_edge[Adj[j]] == true) &&  (randval_v1[janew[Adj[j]]] > maxrand)) {
-                            printf("v = %ld, colindex[janew[Adj[j]] = %ld\n", v, colindex[janew[Adj[j]]]);
+                            printf("v = %ld, colindex[janew[Adj[j]] = %ld\n", rowindex[v], colindex[janew[Adj[j]]]);
                             maxrand = randval_v1[janew[Adj[j]]];
                             maxrandedge = Adj[j];
-//                            printf("%ld with weight %ld has maxrand = %ld which corresponds to vertex %ld \n", v, randval_v0[v], maxrand, rowvertex[janew[maxrandedge]]);
+                            printf("%ld with weight %ld has maxrand = %ld which corresponds to vertex %ld \n", rowindex[v], randval_v0[v], maxrand, rowvertex[janew[maxrandedge]]);
                         }
                     }
 
                     if (maxrandedge < nedges){ // set boolean value in case ties need to be broken
-                        winstie = (v > rowvertex[janew[maxrandedge]]); // based on rownumber when edge is local
+                        winstie = (v >= rowvertex[janew[maxrandedge]]); // based on rownumber when edge is local
                     }
                     else //based on processor number when edge is a halo edge
-                        winstie = (s > destproc[maxrandedge - nedges]);
+                        winstie = (s >= destproc[maxrandedge - nedges]);
                     // check whether vertex v is maximum (or wins tie)
                     if ((randval_v0[v] > maxrand) || ((randval_v0[v] == maxrand) && winstie)) {
                         ismax = true;
