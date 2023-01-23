@@ -37,7 +37,7 @@ void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Ad
                 Alive_edge[f] = false;
                 if (f>nedges){
                     long alive_tag = DEADEDGE; //communicate to remote processor that edge is dead
-                    bsp_send(destproc[e - nedges], &alive_tag, &(v1[e]), sizeof(long));
+                    bsp_send(destproc[f - nedges], &alive_tag, &(v1[f]), sizeof(long));
                 }
             }
         }
@@ -142,6 +142,16 @@ void bspmis(){
             rowvertex[j]= DUMMY; // nonlocal vertex
     }
 
+    long *colvertex= vecalloci(nrows);
+    long t=0; //local row index
+    for (long i=0; i<nrows; i++){
+        long iglob= rowindex[i];
+        while (t<ncols && colindex[t]<iglob)
+            t++;
+        if (t<ncols && colindex[t]==iglob)
+            colvertex[i]= t;
+    }
+
     /* Initialize v0, v1, weight1, degree */
     long nhalo= 0; // number of halo edges
     double sum_max= 0.0; // sum of the maximum weights of the local rows
@@ -206,6 +216,7 @@ void bspmis(){
     long *janew= vecalloci(nedges_tot);
     double *weightnew= vecallocd(nedges_tot);
     long *weight1new= vecalloci(nedges_tot);
+    printf("nedges_tot = %ld, nz = %ld\n", nedges_tot, nz);
 
     for (long k=0; k<nz; k++){
         if (v1[k]==DUMMY || v0[k] < v1[k]){
@@ -411,46 +422,56 @@ void bspmis(){
     srand(time(NULL) * (s + 1));
     bool ismax, winstie;
     long maxrand, maxrandedge;
+    long column;
     while (!alldone) {
         bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, destproc, v1new, Start, v0new, &nalive, nedges);
         bsp_sync();
         if (s==1)
-            printf("nalive = %ld\n", nalive);
+//            printf("nalive = %ld\n", nalive);
         /* Initialize all processors to not done yet */
         for (long t=0; t<p; t++)
             Done[t]= false;
-        long done;
         if (nalive == 0){
+            long done;
             done = true;
             for (long t=0; t<p; t++)
                 bsp_put(t,&done,Done,s*sizeof(long),sizeof(long));
         }
 
-        if (!done) {
+        if (!Done[s]) {
             for (long v = 0; v < nvertices; v++) {
                 if (Alive_vertex[v]) {
                     ismax = false;
                     maxrand = 0;
                     maxrandedge = 0;
                     for (long j = Start[v]; j < Start[v + 1]; j++) { // find adjacent vertex with the largest random value
-                        if ((Alive_edge[Adj[j]] == true) &&  (randval_v1[janew[Adj[j]]] > maxrand)) {
+                        if (v0new[Adj[j]] == v){
+                            column = janew[Adj[j]];
+                        }
+                        else{
+                            column = colvertex[v0new[Adj[j]]];
+                        }
+                        printf("column = %ld\n", column);
+                        if ((Alive_edge[Adj[j]] == true) &&  (randval_v1[column] > maxrand)) {
                             printf("v = %ld, colindex[janew[Adj[j]] = %ld\n", rowindex[v], colindex[janew[Adj[j]]]);
-                            maxrand = randval_v1[janew[Adj[j]]];
+                            maxrand = randval_v1[column];
                             maxrandedge = Adj[j];
-                            printf("%ld with weight %ld has maxrand = %ld which corresponds to vertex %ld \n", rowindex[v], randval_v0[v], maxrand, rowvertex[janew[maxrandedge]]);
+                            printf("%ld with weight %ld has maxrand = %ld which corresponds to vertex %ld \n", (rowindex[v]+1), randval_v0[v], maxrand, (colindex[column]+1));
                         }
                     }
 
                     if (maxrandedge < nedges){ // set boolean value in case ties need to be broken
-                        winstie = (v >= rowvertex[janew[maxrandedge]]); // based on rownumber when edge is local
+                        winstie = (colvertex[v] > column); // based on rownumber when edge is local
                     }
-                    else //based on processor number when edge is a halo edge
-                        winstie = (s >= destproc[maxrandedge - nedges]);
+                    else { //based on processor number when edge is a halo edge
+                        winstie = (s > destproc[maxrandedge - nedges]);
+                    }
                     // check whether vertex v is maximum (or wins tie)
                     if ((randval_v0[v] > maxrand) || ((randval_v0[v] == maxrand) && winstie)) {
                         ismax = true;
+
                     }
-                    printf("ismax = %d\n", ismax);
+//                    printf("ismax = %d\n", ismax);
 //                    for (long j = Start[v]; j < Start[v + 1]; j++) {
 //                        if (Alive_edge[Adj[j]] == true && randval_v0[v] < randval_v1[janew[Adj[j]]]) {
 //                            ismax = false;
