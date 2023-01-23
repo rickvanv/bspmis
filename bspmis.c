@@ -1,20 +1,54 @@
 #include <stdio.h>
 #include <stdlib.h>
-//#include "math.h"
 #include <time.h>
 #include "bspedupack.h"
 #include "bspsparse_input.h"
-//#include <Mondriaan.h>
+#include <Mondriaan.h>
 
 #define MAX_WORD_LENGTH 1024
 #define DEADEDGE 0
 #define DEADVERTEX 1
+
 long P;
-//char *mtxfilepath;
-char distrmtxfilepath[MAX_WORD_LENGTH] = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/testmatrix/test.mtx-P2";
+char *mtxfilepath;
+char distrmtxfilepath[MAX_WORD_LENGTH];
 
 
+/* Function which runs Mondriaan on input mtx file */
+void write_distributed_mtx(char *inputfilepath){
+    sprintf(distrmtxfilepath, "%s-P%ld", inputfilepath, P);
+    FILE *OutputFile;
+    if ((OutputFile = fopen(distrmtxfilepath,"r")) == NULL) { //check if output file already exists
+        OutputFile = fopen(distrmtxfilepath,"w");
+        FILE *InputFile;
+        InputFile = fopen(inputfilepath, "r");
+        /* This will contain the Mondriaan options. */
+        struct opts Options;
+        /* This structure will contain the input matrix. */
+        struct sparsematrix inputmatrix;
+        /* Set the default options. */
+        SetDefaultOptions(&Options);
+        /* If we are done setting the options, we check and apply them. */
+        if (!ApplyOptions(&Options)) {
+            printf("Invalid options!\n");
+        }
+        /* Read it from the file. */
+        if (!MMReadSparseMatrix(InputFile, &inputmatrix)) {
+            printf("Unable to read matrix!\n");
+            fclose(InputFile);
+        }
+        fclose(InputFile);
+        if (!DistributeMatrixMondriaan(&inputmatrix, P, 0.03, &Options, NULL)) {
+            printf("Unable to distribute matrix!\n");
+        }
 
+        /* Write the distributed matrix to file */
+        MMWriteSparseMatrix(&inputmatrix, OutputFile, NULL, &Options);
+        fclose(OutputFile);
+    }
+}
+
+/* Function which processes received messages to kill vertexes or edges*/
 void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Adj, long const *destproc, long const *v1, long const *Start, long const *v0, long *nalive, long const nedges){
     bsp_nprocs_t nmessages; // total number of messages received
     bsp_size_t nbytes; //size of nmessages
@@ -46,45 +80,11 @@ void bsp_process_recvd_msgs(bool *Alive_edge, bool *Alive_vertex, long const *Ad
     }
 }
 
-/* TODO: Insert Mondriaan part */
-//void write_distributed_mtx(char *inputfilepath){
-//    sprintf(distrmtxfilepath, "%s-P%ld", inputfilepath, P);
-//    FILE *OutputFile;
-//    if ((OutputFile = fopen(distrmtxfilepath,"r")) == NULL) { //check if output file already exists
-//        OutputFile = fopen(distrmtxfilepath,"w");
-//        FILE *InputFile;
-//        InputFile = fopen(inputfilepath, "r");
-//        /* This will contain the Mondriaan options. */
-//        struct opts Options;
-//        /* This structure will contain the input matrix. */
-//        struct sparsematrix inputmatrix;
-//        /* Set the default options. */
-//        SetDefaultOptions(&Options);
-//        /* If we are done setting the options, we check and apply them. */
-//        if (!ApplyOptions(&Options)) {
-//            printf("Invalid options!\n");
-//        }
-//        /* Read it from the file. */
-//        if (!MMReadSparseMatrix(InputFile, &inputmatrix)) {
-//            printf("Unable to read matrix!\n");
-//            fclose(InputFile);
-//        }
-//        fclose(InputFile);
-//        if (!DistributeMatrixMondriaan(&inputmatrix, P, 0.03, &Options, NULL)) {
-//            printf("Unable to distribute matrix!\n");
-//        }
-//
-//        /* Write the distributed matrix to file */
-//        MMWriteSparseMatrix(&inputmatrix, OutputFile, NULL, &Options);
-//        fclose(OutputFile);
-//    }
-//}
-
 void bspmis(){
 
     bsp_begin(P);
 
-    /***** Part 0: prepare input *****/
+    /***** Part 0: prepare input *****/ //This part is the same as in the bspmatch_test.c file in BSPedupack
 
     long p= bsp_nprocs(); // p=P
     long s= bsp_pid();
@@ -93,21 +93,8 @@ void bspmis(){
     long n, nz, *ia, *ja;
     double *weight;
     double suma= bspinput2triple(distrmtxfilepath,&n,&nz,&ia,&ja,&weight);/* Sequential part */
-    long maxops=0;
-    bsp_push_reg(&maxops,sizeof(long));
     bsp_sync();
 
-//    if (s==0){
-//        printf("Please enter the maximum number of operations per superstep\n");
-//        printf("    (0 if no maximum)\n"); fflush(stdout);
-//        scanf("%ld",&maxops);
-//        if (maxops>0)
-//            printf("Maximum number of operations per superstep = %ld\n\n", maxops);
-//        else
-//            printf("No maximum number of operations per superstep\n\n");
-//        for (long t=0; t<p; t++)
-//            bsp_put(t,&maxops,&maxops,0,sizeof(long));
-//    }
 
     /* Convert data structure to incremental compressed row storage (ICRS),
        where ia contains the local column index increments,
@@ -216,7 +203,6 @@ void bspmis(){
     long *janew= vecalloci(nedges_tot);
     double *weightnew= vecallocd(nedges_tot);
     long *weight1new= vecalloci(nedges_tot);
-    printf("nedges_tot = %ld, nz = %ld\n", nedges_tot, nz);
 
     for (long k=0; k<nz; k++){
         if (v1[k]==DUMMY || v0[k] < v1[k]){
@@ -269,7 +255,6 @@ void bspmis(){
         } else
             proc[j]= s;
     }
-//    vecfreei(rowvertex);
     bsp_sync();
     bsp_pop_reg(tmpproc);
 
@@ -382,101 +367,71 @@ void bspmis(){
         Alive_vertex[v] = true;
     }
 
-    /* Initialize array for storing remote vertex rowindex */
-    long *v0newrem = vecalloci(nhalo * sizeof(long));
-    for (long e = 0; e < nhalo; e++) { //initialize array
-        v0newrem[e] = -1;
-    }
 
-    /* Create array of random values of vertices */
+    /* Initialize array for storing random values of vertexes */
     long *randval_v0 = vecalloci(nvertices);
     long *randval_v1 = vecalloci(ncols);
-    /* Create array of random values of (local) row vertices */
-    for (long v = 0; v < nvertices; v++) {
-        if (Alive_vertex[v])
-            randval_v0[v] = rand();
-    }
-    /* Align random values of row vertices with column vertices */
-    for (long k = 0; k < ncols; k++) {
-        if (rowvertex[k] != DUMMY)
-            randval_v1[k] = randval_v0[rowvertex[k]];
-        else
-            randval_v1[k] = -1;
-    }
-    bsp_push_reg(v0new, nedges_tot * sizeof(long)); // TODO: set nedges_tot to max(nedges_tot) over all processors (read from mondriaan MTX file?)
+    bsp_push_reg(v0new, nedges_tot * sizeof(long)); //
     bsp_push_reg(randval_v0, nvertices * sizeof(long));
+
     long *Done= vecalloci(p);
     bsp_push_reg(Done,p*sizeof(long));
-    bsp_sync();
-    /* Using local rowindex of remote vertex, retrieve corresponding random value */
-    for (long e = nedges; e < nedges_tot; e++) {
-        if (Alive_edge[e]) {
-            bsp_get(destproc[e - nedges], randval_v0, destvertex[e - nedges] * sizeof(long),
-                    &(randval_v1[janew[e]]),
-                    sizeof(long));
-        }
-    }
+
     bsp_sync();
 
     bool alldone = false;
     srand(time(NULL) * (s + 1));
-    bool ismax, winstie;
-    long maxrand, maxrandedge;
-    long column;
     while (!alldone) {
-        bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, destproc, v1new, Start, v0new, &nalive, nedges);
-        bsp_sync();
-        if (s==1)
-//            printf("nalive = %ld\n", nalive);
         /* Initialize all processors to not done yet */
         for (long t=0; t<p; t++)
             Done[t]= false;
         if (nalive == 0){
-            long done;
-            done = true;
+            long done = true;
             for (long t=0; t<p; t++)
                 bsp_put(t,&done,Done,s*sizeof(long),sizeof(long));
         }
-
         if (!Done[s]) {
+            bsp_process_recvd_msgs(Alive_edge, Alive_vertex, Adj, destproc, v1new, Start, v0new, &nalive, nedges);
+            bsp_sync();
+            /* Create array of random values of (local) row vertices */
             for (long v = 0; v < nvertices; v++) {
+                if (Alive_vertex[v])
+                    randval_v0[v] = rand();
+            }
+            /* Align random values of row vertices with column vertices */
+            for (long k = 0; k < ncols; k++) {
+                if (rowvertex[k] != DUMMY)
+                    randval_v1[k] = randval_v0[rowvertex[k]];
+                else
+                    randval_v1[k] = -1;
+            }
+            bsp_sync();
+
+            /* Using local rowindex of remote vertex, retrieve corresponding random value */
+            for (long e = nedges; e < nedges_tot; e++) {
+                if (Alive_edge[e]) {
+                    bsp_get(destproc[e - nedges], randval_v0, destvertex[e - nedges] * sizeof(long),
+                            &(randval_v1[janew[e]]),
+                            sizeof(long));
+                }
+            }
+            bsp_sync();
+
+            for (long v = 0; v < nvertices ; v++) {
                 if (Alive_vertex[v]) {
-                    ismax = false;
-                    maxrand = 0;
-                    maxrandedge = 0;
-                    for (long j = Start[v]; j < Start[v + 1]; j++) { // find adjacent vertex with the largest random value
-                        if (v0new[Adj[j]] == v){
+                    bool ismax = true;
+                    long column;
+                    for (long j = Start[v]; j < Start[v + 1]; j++) {
+                        if (v0new[Adj[j]] = v){
                             column = janew[Adj[j]];
                         }
                         else{
-                            column = colvertex[v0new[Adj[j]]];
+                            column = colvertex[v1new[Adj[j]]];
                         }
-                        printf("column = %ld\n", column);
-                        if ((Alive_edge[Adj[j]] == true) &&  (randval_v1[column] > maxrand)) {
-                            printf("v = %ld, colindex[janew[Adj[j]] = %ld\n", rowindex[v], colindex[janew[Adj[j]]]);
-                            maxrand = randval_v1[column];
-                            maxrandedge = Adj[j];
-                            printf("%ld with weight %ld has maxrand = %ld which corresponds to vertex %ld \n", (rowindex[v]+1), randval_v0[v], maxrand, (colindex[column]+1));
+                        if (Alive_edge[Adj[j]] == true && randval_v0[v] <= randval_v1[column]) {
+                            ismax = false;
                         }
                     }
-
-                    if (maxrandedge < nedges){ // set boolean value in case ties need to be broken
-                        winstie = (colvertex[v] > column); // based on rownumber when edge is local
-                    }
-                    else { //based on processor number when edge is a halo edge
-                        winstie = (s > destproc[maxrandedge - nedges]);
-                    }
-                    // check whether vertex v is maximum (or wins tie)
-                    if ((randval_v0[v] > maxrand) || ((randval_v0[v] == maxrand) && winstie)) {
-                        ismax = true;
-
-                    }
-//                    printf("ismax = %d\n", ismax);
-//                    for (long j = Start[v]; j < Start[v + 1]; j++) {
-//                        if (Alive_edge[Adj[j]] == true && randval_v0[v] < randval_v1[janew[Adj[j]]]) {
-//                            ismax = false;
-//                        }
-//                    }
                     if (ismax) {
                         locmis[miscount] = rowindex[v];
                         miscount++;
@@ -543,8 +498,8 @@ int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
     /* Sequential part */
     P = 2;
-//    mtxfilepath = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/ca-GrQc/ca-GrQc.mtx";
-//    write_distributed_mtx(mtxfilepath);
+    mtxfilepath = "/home/rick/CLionProjects/ParallelAlgorithms/mis/data/ca-GrQc/ca-GrQc.mtx";
+    write_distributed_mtx(mtxfilepath);
     /* SPMD part */
     bspmis();
     return 0;
