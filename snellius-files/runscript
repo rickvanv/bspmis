@@ -1,0 +1,29 @@
+#!/bin/bash
+# job takes at most 0 days, 0 hours, 10 minutes and 30 seconds
+#SBATCH -t 0-00:10:30
+
+# we ask for 4 nodes 
+#SBATCH -N 4
+
+# we run 8 processes on each node
+#SBATCH --ntasks-per-node=8
+
+# load C compilers and MPI environment
+module load 2022
+module load iimpi/2022a
+
+# EDIT THIS for your own directory
+cd /home/bissstud/Students22/LisaNick/Test-mis
+
+PMIN=8
+PMAX=64
+
+rm -f output_bspmis
+for (( p=$PMIN; p<$PMAX; p *=2 ))
+    do
+        echo  "$p " > input_tmp
+        echo  "                 " >> output_bspmis
+        echo  "-----------------" >> output_bspmis
+        bsprun -n $p ./bspmis < input_tmp >> output_bspmis
+        rm -f input_tmp
+    done
