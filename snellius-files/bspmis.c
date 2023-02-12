@@ -499,12 +499,11 @@ void bspmis(){
             }
         }
     }
-//    printf("Local MIS at processor %ld :", s);
-//    for (long k=0; k<miscount; k++){
-//        printf("%ld, ", locmis[k]+1);
-//    }
-//    fflush(stdout);
-
+    printf("\n \n Local MIS at processor %ld :\n", s);
+    for (long k=0; k<miscount; k++){
+        printf("%ld, ", locmis[k]+1);
+    }
+    fflush(stdout);
 
     bsp_pop_reg(randval_rows);
     bsp_sync();
@@ -520,15 +519,7 @@ int main(int argc, char **argv){
     bsp_init(bspmis, argc, argv);
 
     /* Sequential part */
-    printf("How many processors do you want to use?\n");
-    fflush(stdout);
-    scanf("%ld",&P);
-    if (P > bsp_nprocs()){
-        printf("Sorry, only %u processors available.\n",
-                bsp_nprocs());
-        fflush(stdout);
-        exit(EXIT_FAILURE);
-    }
+    P=4;
 
     /* SPMD part */
     bspmis();
